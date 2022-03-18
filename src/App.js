@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getShoePrice } from './api.js';
 
 const shoeDatabase = [
   {
@@ -41,26 +42,31 @@ const shoeDatabase = [
 
 function App() {
   const [items, setItems] = useState({});
-
+  
   useEffect(() => {
-    const request = () =>
-        shoeDatabase.map((eachShoe) => {
-          fetch(`/api/shoe-price/${eachShoe.shoeId}`)
-              .then((response) => response.json())
-              .then((eachShoeResponse) =>
-                  setItems((prevItems) => ({
-                    ...prevItems,
-                    [eachShoe.shoeId]: {
-                      ...eachShoe,
-                      ...eachShoeResponse,
-                    },
-                  }))
-              );
+    let sub = true
+    const request = () => {
+        shoeDatabase.forEach(async (eachShoe) => {
+          const priceInfo = await getShoePrice(eachShoe.shoeId)
+          if (sub) {
+            setItems((prevItem) => ({
+            ...prevItem,
+            [eachShoe.shoeId]: {
+              ...eachShoe,
+              ...priceInfo
+              }
+            }))
+          }
         });
-
-    // setInterval(request, 5000);
+      }
+    const intervalId = setInterval(request, 5000);
 
     request();
+    return () => {
+      // effect clean up
+      sub = false
+      clearInterval(intervalId)
+    }
   }, []);
 
   return (
@@ -77,9 +83,9 @@ function App() {
           <tbody>
           {Object.keys(items).map((itemKey) => (
               <tr key={items[itemKey].shoeId} >
-                <td width={250}>{items[itemKey].model}</td>
-                <td width={250}>{items[itemKey].shoePrice}</td>
-                <td>
+                <td width={250} data-testid={`model-${items[itemKey].shoeId}`}>{items[itemKey].model}</td>
+                <td width={250} data-testid={`price-${items[itemKey].shoeId}`}>{items[itemKey].shoePrice}</td>
+                <td data-testid={`state-${items[itemKey].shoeId}`}>
                   {items[itemKey].shoePrice <
                   items[itemKey].minPrice && <span>Best time to buy!</span>}
                   {items[itemKey].shoePrice >
